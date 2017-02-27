@@ -1,0 +1,25 @@
+#!/bin/bash
+#
+# Program: CodeDeploy install session helper on On-Premises
+# Description: Generates AWS STS credentials and writes to a file place on the instance.
+
+if [ -e /opt/codedeploy-session-helper/config.ini ]; then
+  source /opt/codedeploy-session-helper/config.ini
+else
+  echo "Can not find \'config.ini\'"
+fi
+
+# install aws-codedeploy-session-helper
+aws sts assume-role --role-arn arn:$RoleARN --role-session-name $RoleSession > credentials_tmp
+AccessKeyId=$(cat credentials_tmp | grep AccessKeyId | awk -F'"' '{print $4}')
+SecretAccessKey=$(cat credentials_tmp | grep SecretAccessKey | awk -F'"' '{print $4}')
+SessionToken=$(cat credentials_tmp | grep SessionToken | awk -F'"' '{print $4}')
+
+tee $CredentialsFile <<EOF
+[default]
+aws_access_key_id = $AccessKeyId
+aws_secret_access_key = $SecretAccessKey
+aws_session_token = $SessionToken 
+EOF
+
+rm credentials_tmp

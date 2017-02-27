@@ -1,0 +1,5 @@
+# CodeDeploy Generates AWS STS session
+# This cron file has to run after every 30 min.
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+*/30 * * * * root /opt/codedeploy-session-helper/sts-renew
