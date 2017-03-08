@@ -1,0 +1,39 @@
+#!/bin/bash
+#
+# Program: CodeDeploy install session helper on On-Premises
+# Description: codedeploy-agent setup
+if [ -e config.ini ]; then
+  source config.ini
+else
+  echo "Can not find 'config.ini'"
+  exit 1
+fi
+
+check_env() {
+  if [ ! `which ruby` ]; then
+    sudo apt-get install -y ruby
+  fi
+  if [ ! `which wget` ]; then
+    sudo apt-get install -y wget
+  fi
+}
+
+setup-codedeployagent() {
+  cd /tmp
+  if [ $HTTPS_PROXY ]; then
+    curl -x $HTTPS_PROXY -o install-codedeploy -O https://aws-codedeploy-${Region}.s3.amazonaws.com/latest/install
+    wait
+    sudo chmod +x ./install-codedeploy
+    sudo ./install-codedeploy --proxy $HTTPS_PROXY auto
+  else
+    curl -o install-codedeploy -O https://aws-codedeploy-${Region}.s3.amazonaws.com/latest/install
+    wait
+    sudo chmod +x ./install-codedeploy
+    sudo ./install-codedeploy auto
+  fi
+  wait
+  rm install-codedeploy
+}
+
+check_env
+setup-codedeployagent

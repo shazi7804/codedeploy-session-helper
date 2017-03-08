@@ -8,27 +8,22 @@ else
   echo "Can not find \'config.ini\'"
 fi
 
-helper_prefix="/opt/codedeploy-session-helper"
-
-install_codedeploy_agent(){
-  sudo apt-get install -y ruby wget
-  wget https://aws-codedeploy-${Region}.s3.amazonaws.com/latest/install
-  wait
-  sudo chmod +x ./install
-  sudo ./install auto
-  wait
-  rm install
-}
-
-
 install_session_helper(){
+  # install sts-renew
   if [ ! -d $helper_prefix ]; then
     sudo mkdir -p $helper_prefix
   fi
+  sudo cp sts-renew $helper_prefix/
+  sudo tee $helper_prefix/sts-renew.ini <<EOF
+RoleARN=$RoleARN
+RoleSession=$RoleSession
+CredentialsFile=$CredentialsFile
+EOF
 
-  sudo cp sts-renew config.ini $helper_prefix/
+  # Run sts-renew every 30 minutes
   sudo cp codedeploy-session-update /etc/cron.d/
 
+  # setting codedeploy agent for onpremises
   if [ ! -d $CodeDeploy_conf ]; then
     sudo mkdir -p $CodeDeploy_conf
   fi
@@ -42,29 +37,22 @@ EOF
   sudo $helper_prefix/sts-renew
 }
 
-if [ -n awscli-setup ] && [ -n sts-renew ]; then
-  sudo bash awscli-setup
+if [ -n awscli-setup ] && [ -n sts-renew ] && [ -n codedeployagent-setup ] ; then
+  # awscli
+  ./awscli-setup
+  if [ -n $ACCESS_KEY ] && [ -n $ACCESS_SECRET_KEY ] && [ -n $Region ]; then
+    sudo aws configure set aws_access_key_id $ACCESS_KEY
+    sudo aws configure set aws_secret_access_key $ACCESS_SECRET_KEY
+    sudo aws configure set default.region $Region
 
-  if [ ! -d ~/.aws ]; then
-    sudo mkdir ~/.aws
+    # copy to root use
+    sudo cp -R ~/.aws /root/
+  else
+    echo "Can not find the key"
   fi
 
-  export Region=$Region
-
-  tee ~/.aws/config <<EOF
-[default]
-region = $Region
-output = json
-EOF
-
-  tee ~/.aws/credentials <<EOF
-[default]
-aws_access_key_id = $ACCESS_KEY
-aws_secret_access_key = $ACCESS_SECRET_KEY
-EOF
-
   install_session_helper
-  install_codedeploy_agent
+  ./codedeployagent-setup
 else
   echo "Oops !! lost program ... please contact the system administrator"
 fi

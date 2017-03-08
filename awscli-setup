@@ -25,18 +25,21 @@ check_env(){
   fi
 
   if [ ! `which wget` ]; then
-    apt-get install -y wget
+    sudo apt-get install -y wget
+  fi
+  
+  if [ ! `which unzip` ]; then
+    sudo apt-get install -y unzip
   fi
 }
 
 get_package() {
   echo -n "Download awscli package ..."
-  wget -q "$awsuri" -P "$tmpdir"
-  if [[ 0 -eq $? ]]; then
-    echo "OK"
+  cd /tmp
+  if [ $HTTPS_PROXY ]; then
+    curl -x $HTTPS_PROXY -O "$awsuri"
   else
-    echo "fail"
-    exit 0
+    curl -O "$awsuri"
   fi
 }
 
@@ -53,7 +56,7 @@ awscli_install() {
   fi
 
   echo "Install awscli ..."
-  ${tmpdir}/${awscli}/install -i "$prefix" -b "$prefix_bin"
+  sudo ${tmpdir}/${awscli}/install -i "$prefix" -b "$prefix_bin"
   if [ $? -eq 0 ]; then
     rm -rf ${tmpdir}/${awscli}
     echo "clean install package file finish."
@@ -62,8 +65,16 @@ awscli_install() {
   fi
 }
 
+if [ -e config.ini ]; then
+  source config.ini
+else
+  echo "Can not find 'config.ini'"
+  exit 1
+fi
+
 if which aws; then
   echo "$(which aws) already exist."
+  exit 1
 else
   awscli_install
 fi

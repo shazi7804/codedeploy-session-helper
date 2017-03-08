@@ -3,23 +3,25 @@
 # Program: CodeDeploy install session helper on On-Premises
 # Description: Generates AWS STS credentials and writes to a file place on the instance.
 
-if [ -e /opt/codedeploy-session-helper/config.ini ]; then
-  source /opt/codedeploy-session-helper/config.ini
+if [ -e /opt/codedeploy-session-helper/sts-renew.ini ]; then
+  source /opt/codedeploy-session-helper/sts-renew.ini
 else
-  echo "Can not find \'config.ini\'"
+  echo "Can not find 'sts-renew.ini'"
 fi
 
-# install aws-codedeploy-session-helper
-aws sts assume-role --role-arn arn:$RoleARN --role-session-name $RoleSession > credentials_tmp
-AccessKeyId=$(cat credentials_tmp | grep AccessKeyId | awk -F'"' '{print $4}')
-SecretAccessKey=$(cat credentials_tmp | grep SecretAccessKey | awk -F'"' '{print $4}')
-SessionToken=$(cat credentials_tmp | grep SessionToken | awk -F'"' '{print $4}')
+cred_tmp=/tmp/credentials_tmp
 
-tee $CredentialsFile <<EOF
+# install aws-codedeploy-session-helper
+aws sts assume-role --role-arn $RoleARN --role-session-name $RoleSession > $cred_tmp
+AccessKeyId=$(cat $cred_tmp | grep AccessKeyId | awk -F'"' '{print $4}')
+SecretAccessKey=$(cat $cred_tmp | grep SecretAccessKey | awk -F'"' '{print $4}')
+SessionToken=$(cat $cred_tmp | grep SessionToken | awk -F'"' '{print $4}')
+
+sudo tee $CredentialsFile <<EOF
 [default]
 aws_access_key_id = $AccessKeyId
 aws_secret_access_key = $SecretAccessKey
 aws_session_token = $SessionToken 
 EOF
 
-rm credentials_tmp
+rm $cred_tmp
